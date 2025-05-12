@@ -1,0 +1,48 @@
+/*
+ * 瀑布流布局修复
+ */
+
+/* 基本瀑布流布局修复 */
+#main.waterflow {
+	padding: 0;
+	overflow: visible;
+}
+
+#main.waterflow article.post {
+	transition: all .3s ease;
+	/* 防止卡片重叠 */
+	z-index: 1;
+	overflow: hidden;
+	box-sizing: border-box;
+}
+
+@media (min-width: 992px) {
+	.container-fluid #main.waterflow article.post {
+		max-width: calc(100% - 20px) !important;
+		margin-right: 5px !important;
+	}
+	
+	/* 确保在有侧边栏的情况下卡片不会重叠 */
+	.container-fluid.has-sidebar #main.waterflow {
+		padding-right: 15px;
+	}
+}
+
+/* 修复卡片间距，防止重叠 */
+#main.waterflow article.post {
+	margin-bottom: 15px !important;
+}
+
+/* 确保瀑布流占位符正确显示 */
+.waterflow-placeholder {
+	pointer-events: none;
+	width: 100%;
+	clear: both;
+}
+
+/* 修复在不同缩放比例下的显示问题 */
+@media (min-width: 768px) and (max-width: 1200px) {
+	.container-fluid.has-sidebar #main.waterflow article.post {
+		margin-right: 10px !important;
+	}
+}

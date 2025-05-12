@@ -476,11 +476,24 @@ function waterflowInit() {
 	if (argonConfig.waterflow_columns == "1") {
 		return;
 	}
+	// 监听图片加载事件，确保图片加载后重新计算布局
 	$("#main.article-list img").each(function(index, ele){
+		if (ele.complete) {
+			// 图片已经加载完成
+			return;
+		}
 		ele.onload = function(){
-			waterflowInit();
+			// 图片加载完成后延迟执行，确保所有DOM元素都已渲染
+			setTimeout(function() {
+				waterflowInit();
+			}, 50);
 		}
 	});
+	
+	// 处理已加载完成的图片
+	setTimeout(function() {
+		waterflowInit();
+	}, 50);
 	let columns;
 	if (argonConfig.waterflow_columns == "2and3") {
 		if ($("#main").outerWidth() > 1000) {
@@ -529,16 +542,33 @@ function waterflowInit() {
 		$(".waterflow-placeholder").remove();
 	}else{
 		$container.addClass("waterflow");
+		// 重置高度数组
+		heights = [0, 0, 0];
 		$items.each(function(index, item) {
 			let $item = $(item);
 			$item.css("transition", "none")
 				.css("position", "absolute")
-				.css("width", "calc(" + (100 / columns) + "% - " + (10 * (columns - 1) / columns) + "px)").css("margin", 0);
+				.css("width", "calc(" + (100 / columns) + "% - " + (15 * (columns - 1) / columns) + "px)")
+				.css("margin", 0)
+				.css("box-sizing", "border-box");
+				
+			// 确保在缩放时不会与侧边栏重叠
+			if ($("#sidebar").length && $("#sidebar").is(":visible")) {
+				$item.css("max-width", "calc(100% - 15px)");
+			}
+			// 确保元素完全渲染后再获取高度
 			let itemHeight = $item.outerHeight() + 10;
 			let pos = getMinHeightPosition();
-			$item.css("top", heights[getMinHeightPosition()] + "px")
-				.css("left", (pos * $item.outerWidth() + 10 * pos) + "px");
-			heights[pos] += itemHeight;
+			// 计算左侧位置时增加更多间距，防止卡片重叠
+			let leftPosition = pos * (100 / columns) + "%";
+			if (pos > 0) {
+				// 为非第一列的卡片添加额外间距
+				leftPosition = "calc(" + leftPosition + " + " + (15 * pos) + "px)";
+			}
+			$item.css("top", heights[pos] + "px")
+				.css("left", leftPosition);
+			// 添加额外的间距，确保卡片不会重叠
+			heights[pos] += itemHeight + 5;
 		});
 	}
 	if ($(".waterflow-placeholder").length) {
@@ -547,15 +577,66 @@ function waterflowInit() {
 		$container.prepend("<div class='waterflow-placeholder' style='height: " + getMaxHeight() +"px;'></div>");
 	}
 }
+
+// 初始化瀑布流
 waterflowInit();
+
 if (argonConfig.waterflow_columns != "1") {
+	// 窗口大小改变时重新计算布局
 	$(window).resize(function(){
 		waterflowInit();
 	});
+	
+	// 监听DOM变化重新计算布局
 	new MutationObserver(function(mutations, observer){
 		waterflowInit();
 	}).observe(document.querySelector("#primary"), {
 		'childList': true
+	});
+	
+	// 强制重新计算瀑布流布局的函数
+	function forceRecalculateWaterflow() {
+		// 先清除所有样式
+		let $container = $("#main.article-list");
+		if (!$container.length) {
+			return;
+		}
+		let $items = $container.find("article.post:not(.no-results), .shuoshuo-preview-container");
+		$items.css("transition", "").css("position", "").css("width", "").css("top", "").css("left", "").css("margin", "");
+		$(".waterflow-placeholder").remove();
+		
+		// 延迟后重新计算
+		setTimeout(function() {
+			waterflowInit();
+			// 再次延迟计算，确保所有元素都已正确渲染
+			setTimeout(function() {
+				waterflowInit();
+			}, 200);
+		}, 100);
+	}
+	
+	// 页面加载完成后重新计算布局
+	$(window).on('load', function() {
+		forceRecalculateWaterflow();
+	});
+	
+	// 页面跳转后重新计算布局
+	$(document).on('pjax:complete', function() {
+		forceRecalculateWaterflow();
+	});
+	
+	// 浏览器缩放后重新计算布局
+	window.addEventListener('resize', function() {
+		forceRecalculateWaterflow();
+	});
+	
+	// 监听页面滚动事件，确保在滚动时布局正确
+	$(window).on('scroll', function() {
+		if ($(window).scrollTop() > 100) {
+			setTimeout(function() {
+				waterflowInit();
+			}, 200);
+		}
 	});
 }
 
